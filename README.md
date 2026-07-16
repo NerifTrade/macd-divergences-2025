@@ -1,4 +1,15 @@
-# MACD Divergences 2025
+# Pine Indicator Library
+
+TradingView Pine Script indicator library.
+
+This repository currently contains:
+
+- `MACD-Divergences-2025.pine`
+- `0800-Open-Cross.pine`
+
+These scripts are indicators, not automated trading strategies. They do not place orders, calculate position sizing, or produce TradingView Strategy Tester backtest results by themselves.
+
+## 1. MACD Divergences 2025
 
 TradingView Pine Script indicator for MACD divergence markers using Heikin Ashi close data.
 
@@ -75,4 +86,70 @@ This indicator can be used to scan for possible momentum divergence around MACD 
 
 1. Open TradingView Pine Editor.
 2. Paste the contents of `MACD-Divergences-2025.pine`.
+3. Add it to chart.
+
+## 2. 08:00 Open Cross
+
+TradingView Pine Script indicator that marks the 08:00 candle based on Malaysia time (`Asia/Kuala_Lumpur`) and draws a cross reference on the chart.
+
+## What This Indicator Does
+
+`08:00 Open Cross` draws two lines when the chart reaches 08:00 Malaysia time:
+
+- A horizontal line at the 08:00 candle open price.
+- A vertical line at the 08:00 candle time.
+
+The indicator deletes the previous pair of lines before drawing the newest pair. This means the chart only keeps the latest 08:00 cross reference instead of filling the chart with historical lines.
+
+## Core Logic
+
+1. Detect the 08:00 candle:
+   - Uses `hour(time, "Asia/Kuala_Lumpur") == 8`
+   - This checks the bar time using Malaysia time, which is UTC+8
+
+2. Delete previous lines:
+   - If the old horizontal line exists, delete it with `line.delete(h)`
+   - If the old vertical line exists, delete it with `line.delete(v)`
+
+3. Draw the new horizontal line:
+   - Starts at the current bar index
+   - Uses the current candle `open` price
+   - Extends to the right side of the chart with `extend.right`
+
+4. Draw the new vertical line:
+   - Draws from the current bar low to high
+   - Extends vertically both ways with `extend.both`
+
+## Marker Meaning
+
+| Line | Code object | Meaning |
+| --- | --- | --- |
+| Horizontal line | `h` | The 08:00 candle open price |
+| Vertical line | `v` | The 08:00 time marker |
+
+Both lines use the selected `Cross Color`, defaulting to orange.
+
+## Important Notes
+
+- The script depends on chart bars that include an 08:00 Malaysia time candle.
+- On higher timeframes, the exact 08:00 bar may not exist or may represent a wider candle window.
+- The script currently checks only `hour == 8`, not `minute == 0`. On intraday timeframes smaller than 1 hour, every bar from 08:00 to 08:59 can satisfy the condition. If you want only the exact 08:00 candle, add a minute check: `minute(time, "Asia/Kuala_Lumpur") == 0`.
+- This is a visual reference indicator. It does not generate buy/sell orders or backtest results.
+
+## Practical Use
+
+This indicator can be used to track the market reaction around the Malaysia-time 08:00 open reference:
+
+- Use the horizontal line as the key 08:00 open price level.
+- Use the vertical line to quickly identify the 08:00 session point.
+- Combine the level with breakout, rejection, liquidity sweep, or session-open rules if you want to build a full trading strategy later.
+
+## File
+
+- `0800-Open-Cross.pine`
+
+## TradingView Usage
+
+1. Open TradingView Pine Editor.
+2. Paste the contents of `0800-Open-Cross.pine`.
 3. Add it to chart.

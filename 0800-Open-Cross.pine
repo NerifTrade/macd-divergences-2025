@@ -1,0 +1,21 @@
+//@version=5
+indicator("08:00 Open Cross", overlay=true)
+
+// 颜色选项
+crossColor = input.color(color.orange, "Cross Color")
+
+var line h = na
+var line v = na
+
+// 0800（UTC+8 / 马来西亚时间）
+if hour(time, "Asia/Kuala_Lumpur") == 8
+    if not na(h)
+        line.delete(h)
+    if not na(v)
+        line.delete(v)
+
+    // 横线：08:00 开盘价
+    h := line.new(bar_index, open, bar_index + 1, open, extend=extend.right, color=crossColor)
+
+    // 竖线：08:00 时间
+    v := line.new(bar_index, low, bar_index, high, extend=extend.both, color=crossColor)
