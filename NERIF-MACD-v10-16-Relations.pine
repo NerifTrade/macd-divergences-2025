@@ -1,0 +1,192 @@
+//@version=5
+indicator("NERIF MACD v10 - with 16 Relations + MACD Base", overlay=true, max_lines_count=500, max_labels_count=500)
+
+// === MACD 鍙傛暟 ===
+src = input(close, "Source")
+fastLength = input.int(12, "Fast Length")
+slowLength = input.int(26, "Slow Length")
+signalLength = input.int(9, "Signal Length")
+hlineVal = input.float(0.0, "Horizontal Line Value")
+
+// === 棰滆壊/鏍峰紡 ===
+col_histUp = input.color(color.new(#26A69A,0), "Hist Up")
+col_histDown = input.color(color.new(#EF5350,0), "Hist Down")
+col_macd = input.color(color.new(color.blue,0), "MACD Fast Line")
+col_signal = input.color(color.new(color.orange,0), "Signal Slow Line")
+col_dot_bull = input.color(color.green, "Gold Cross Dot")
+col_dot_bear = input.color(color.red, "Dead Cross Dot")
+
+// === MACD 璁＄畻 ===
+fastMA = ta.ema(src, fastLength)
+slowMA = ta.ema(src, slowLength)
+macd = fastMA - slowMA
+signal = ta.ema(macd, signalLength)
+hist = macd - signal
+
+// === 鍩虹缁樺埗锛圡ACD 鏌辩姸鍥?+ 蹇參绾?+ 闆惰酱 + 浜ゅ弶鐐癸級 ===
+plot(hlineVal, "Zero Line", color=color.gray)
+plot(hist, style=plot.style_columns, color=hist >= 0 ? col_histUp : col_histDown, title="Histogram")
+plot(macd, color=col_macd, title="MACD Fast")
+plot(signal, color=col_signal, title="Signal Slow")
+
+plotshape(ta.crossover(macd, signal) ? signal : na, color=col_dot_bull, style=shape.circle, size=size.small, title="Gold Cross Dot")
+plotshape(ta.crossunder(macd, signal) ? signal : na, color=col_dot_bear, style=shape.circle, size=size.small, title="Dead Cross Dot")
+
+// === 妫€娴嬮噾鍙?姝诲弶 ===
+isGold = ta.crossover(macd, signal)
+isDead = ta.crossunder(macd, signal)
+
+// === 瀛樺偍涓婁竴娆′氦鍙夋暟鎹紙閬垮厤绫诲瀷閿欒锛?===
+var string prevType = ""
+var float  prevMacd = 0.0
+var float  prevClose = 0.0
+var int    prevBar = na
+
+// === 16 涓嫭绔嬪紑鍏?===
+// GG 鍥涚
+show_GG_LHLH = input.bool(true,  "GG - LHLH (macd鈫? close鈫?")
+show_GG_LHHL = input.bool(true,  "GG - LHHL (macd鈫? close鈫?")
+show_GG_HLHL = input.bool(true,  "GG - HLHL (macd鈫? close鈫?")
+show_GG_HLLH = input.bool(true,  "GG - HLLH (macd鈫? close鈫?")
+col_GG = input.color(color.teal, "GG 棰滆壊")
+// GD 鍥涚
+show_GD_LHLH = input.bool(true,  "GD - LHLH")
+show_GD_LHHL = input.bool(true,  "GD - LHHL")
+show_GD_HLHL = input.bool(true,  "GD - HLHL")
+show_GD_HLLH = input.bool(true,  "GD - HLLH")
+col_GD = input.color(color.orange, "GD 棰滆壊")
+// DD 鍥涚
+show_DD_LHLH = input.bool(true,  "DD - LHLH")
+show_DD_LHHL = input.bool(true,  "DD - LHHL")
+show_DD_HLHL = input.bool(true,  "DD - HLHL")
+show_DD_HLLH = input.bool(true,  "DD - HLLH")
+col_DD = input.color(color.red, "DD 棰滆壊")
+// DG 鍥涚
+show_DG_LHLH = input.bool(true,  "DG - LHLH")
+show_DG_LHHL = input.bool(true,  "DG - LHHL")
+show_DG_HLHL = input.bool(true,  "DG - HLHL")
+show_DG_HLLH = input.bool(true,  "DG - HLLH")
+col_DG = input.color(color.purple, "DG 棰滆壊")
+
+// 鏍囩鍏ㄥ眬寮€鍏?
+showLabels = input.bool(true, "鏄剧ず鏍囩")
+showLines  = input.bool(true, "鏄剧ず杩炵嚎")
+
+// === 杈呭姪锛氱嚎/鏍囩绠＄悊 ===
+var line[] createdLines = array.new_line()
+var label[] createdLabels = array.new_label()
+maxKeep = 300
+
+f_pushLine(_l) =>
+    array.push(createdLines, _l)
+    if array.size(createdLines) > maxKeep
+        line.delete(array.shift(createdLines))
+
+f_pushLabel(_lb) =>
+    array.push(createdLabels, _lb)
+    if array.size(createdLabels) > maxKeep
+        label.delete(array.shift(createdLabels))
+
+// === 鍒ゆ柇骞剁粯鍒跺嚱鏁?===
+f_handle_relation(relation, currMacd, currClose, currBar) =>
+    macdHigher = currMacd > prevMacd
+    closeHigher = currClose > prevClose
+    showFlag = false
+    col = color.gray
+    txt = ""
+
+    if relation == "GG"
+        if macdHigher and closeHigher
+            showFlag := show_GG_LHLH
+            col := col_GG
+            txt := "GG-LHLH"
+        else if macdHigher and not closeHigher
+            showFlag := show_GG_LHHL
+            col := col_GG
+            txt := "GG-LHHL"
+        else if not macdHigher and not closeHigher
+            showFlag := show_GG_HLHL
+            col := col_GG
+            txt := "GG-HLHL"
+        else
+            showFlag := show_GG_HLLH
+            col := col_GG
+            txt := "GG-HLLH"
+
+    else if relation == "GD"
+        if macdHigher and closeHigher
+            showFlag := show_GD_LHLH
+            col := col_GD
+            txt := "GD-LHLH"
+        else if macdHigher and not closeHigher
+            showFlag := show_GD_LHHL
+            col := col_GD
+            txt := "GD-LHHL"
+        else if not macdHigher and not closeHigher
+            showFlag := show_GD_HLHL
+            col := col_GD
+            txt := "GD-HLHL"
+        else
+            showFlag := show_GD_HLLH
+            col := col_GD
+            txt := "GD-HLLH"
+
+    else if relation == "DD"
+        if macdHigher and closeHigher
+            showFlag := show_DD_LHLH
+            col := col_DD
+            txt := "DD-LHLH"
+        else if macdHigher and not closeHigher
+            showFlag := show_DD_LHHL
+            col := col_DD
+            txt := "DD-LHHL"
+        else if not macdHigher and not closeHigher
+            showFlag := show_DD_HLHL
+            col := col_DD
+            txt := "DD-HLHL"
+        else
+            showFlag := show_DD_HLLH
+            col := col_DD
+            txt := "DD-HLLH"
+
+    else if relation == "DG"
+        if macdHigher and closeHigher
+            showFlag := show_DG_LHLH
+            col := col_DG
+            txt := "DG-LHLH"
+        else if macdHigher and not closeHigher
+            showFlag := show_DG_LHHL
+            col := col_DG
+            txt := "DG-LHHL"
+        else if not macdHigher and not closeHigher
+            showFlag := show_DG_HLHL
+            col := col_DG
+            txt := "DG-HLHL"
+        else
+            showFlag := show_DG_HLLH
+            col := col_DG
+            txt := "DG-HLLH"
+
+    if showFlag
+        if showLines and not na(prevBar)
+            l = line.new(x1=prevBar, y1=prevClose, x2=currBar, y2=currClose, xloc=xloc.bar_index, extend=extend.none, color=col, width=2)
+            f_pushLine(l)
+        if showLabels
+            lb = label.new(currBar, currClose, txt, xloc=xloc.bar_index, yloc=yloc.price, style=label.style_label_left, color=col, textcolor=color.white, size=size.small)
+            f_pushLabel(lb)
+
+// === 涓婚€昏緫锛氬彂鐢熶氦鍙夋椂鍒ゆ柇 ===
+if isGold or isDead
+    currType = isGold ? "G" : "D"
+    currMacd = macd
+    currClose = close
+    currBar = bar_index
+
+    if prevType != ""
+        rel = str.format("{0}{1}", prevType, currType)
+        f_handle_relation(rel, currMacd, currClose, currBar)
+
+    prevType := currType
+    prevMacd := currMacd
+    prevClose := currClose
+    prevBar := currBar

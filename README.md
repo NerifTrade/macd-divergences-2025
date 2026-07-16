@@ -6,6 +6,7 @@ This repository currently contains:
 
 - `MACD-Divergences-2025.pine`
 - `0800-Open-Cross.pine`
+- `NERIF-MACD-v10-16-Relations.pine`
 
 These scripts are indicators, not automated trading strategies. They do not place orders, calculate position sizing, or produce TradingView Strategy Tester backtest results by themselves.
 
@@ -152,4 +153,131 @@ This indicator can be used to track the market reaction around the Malaysia-time
 
 1. Open TradingView Pine Editor.
 2. Paste the contents of `0800-Open-Cross.pine`.
+3. Add it to chart.
+
+## 3. NERIF MACD v10 - 16 Relations + MACD Base
+
+TradingView Pine Script indicator that combines a standard MACD display with cross-point relationship tracking.
+
+## What This Indicator Does
+
+`NERIF MACD v10 - with 16 Relations + MACD Base` plots the MACD base components and then tracks every MACD gold cross and dead cross. When a new cross happens, it compares the new cross point with the previous cross point and classifies the relationship into one of 16 possible relation labels.
+
+The indicator can draw:
+
+- MACD histogram
+- MACD fast line
+- Signal slow line
+- Zero line
+- Gold cross dot
+- Dead cross dot
+- Relation label between two cross events
+- Optional connecting line between cross-event price points
+
+This is useful when you want to study how price and MACD momentum behave from one cross event to the next.
+
+## Core Logic
+
+1. Calculate MACD:
+   - Fast EMA: default `12`
+   - Slow EMA: default `26`
+   - Signal EMA: default `9`
+   - Histogram: `macd - signal`
+
+2. Detect cross type:
+   - Gold cross: `ta.crossover(macd, signal)`
+   - Dead cross: `ta.crossunder(macd, signal)`
+
+3. Store previous cross data:
+   - Previous cross type: `G` or `D`
+   - Previous MACD value
+   - Previous close price
+   - Previous bar index
+
+4. When a new cross appears:
+   - Current cross type is converted to `G` or `D`
+   - Previous type and current type form the relation group:
+     - `GG`: gold cross to gold cross
+     - `GD`: gold cross to dead cross
+     - `DD`: dead cross to dead cross
+     - `DG`: dead cross to gold cross
+
+5. Compare MACD and close:
+   - `macdHigher = currMacd > prevMacd`
+   - `closeHigher = currClose > prevClose`
+   - These two comparisons create four possible states inside each relation group.
+
+## 16 Relation Labels
+
+Each relation has two parts:
+
+- The first two letters describe the cross sequence.
+- The final four letters describe whether MACD and close are higher or lower compared with the previous cross point.
+
+| Relation group | Meaning |
+| --- | --- |
+| `GG` | Previous cross was gold, current cross is gold |
+| `GD` | Previous cross was gold, current cross is dead |
+| `DD` | Previous cross was dead, current cross is dead |
+| `DG` | Previous cross was dead, current cross is gold |
+
+Inside each group:
+
+| Suffix | Meaning in this script |
+| --- | --- |
+| `LHLH` | MACD is higher, close is higher |
+| `LHHL` | MACD is higher, close is not higher |
+| `HLHL` | MACD is not higher, close is not higher |
+| `HLLH` | MACD is not higher, close is higher |
+
+Example:
+
+- `GG-LHLH` means the previous cross and current cross are both gold crosses, while current MACD and current close are both higher than the previous cross point.
+- `GD-LHHL` means the previous cross was gold and the current cross is dead, while MACD is higher but close is not higher than the previous cross point.
+
+## Visual Output
+
+| Element | Meaning |
+| --- | --- |
+| Histogram | MACD histogram |
+| Blue line | MACD fast line |
+| Orange line | Signal slow line |
+| Green dot | Gold cross |
+| Red dot | Dead cross |
+| Colored label | Classified cross-to-cross relation |
+| Colored line | Optional line connecting previous and current cross price points |
+
+The relation colors are configurable:
+
+- `GG`: teal
+- `GD`: orange
+- `DD`: red
+- `DG`: purple
+
+## Important Notes
+
+- This script is an indicator, not a strategy.
+- It does not call `strategy.entry()`, `strategy.exit()`, or `strategy.close()`.
+- It cannot produce TradingView Strategy Tester results unless converted into a `strategy()` script with explicit trading rules.
+- The source file comments appear to have encoding issues, but the Pine logic itself is readable.
+- The indicator stores and manages created lines and labels with arrays, keeping up to `300` objects to avoid overloading the chart.
+- The script uses the current chart close price, not Heikin Ashi close unless the chart itself is set to Heikin Ashi.
+
+## Practical Use
+
+This indicator is useful for reviewing MACD cross structure:
+
+- See whether each new gold/dead cross happens at a higher or lower MACD value.
+- Compare whether price close confirms or contradicts the MACD movement.
+- Use the 16 relation labels to classify market behavior between cross points.
+- Combine the labels with trend filters, higher timeframe context, support/resistance, or your own entry rules before making trading decisions.
+
+## File
+
+- `NERIF-MACD-v10-16-Relations.pine`
+
+## TradingView Usage
+
+1. Open TradingView Pine Editor.
+2. Paste the contents of `NERIF-MACD-v10-16-Relations.pine`.
 3. Add it to chart.
