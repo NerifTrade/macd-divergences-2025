@@ -12,6 +12,7 @@ This repository currently contains:
 - `MA-16.pine`
 - `Heikin-ma50.pine`
 - `Large-Pullback-Risk-Model-BTC-4H-Tuned.pine`
+- `Wyckoff-JOC-Jump-Over-Creek.pine`
 
 These scripts are indicators, not automated trading strategies. They do not place orders, calculate position sizing, or produce TradingView Strategy Tester backtest results by themselves.
 
@@ -752,3 +753,84 @@ This indicator can be used as a risk dashboard:
 1. Open TradingView Pine Editor.
 2. Paste the contents of `Large-Pullback-Risk-Model-BTC-4H-Tuned.pine`.
 3. Add it to BTC 4H chart.
+
+## 9. Wyckoff - JOC (Jump Over Creek)
+
+TradingView Pine v6 overlay indicator for detecting a Wyckoff-style Jump Over Creek breakout.
+
+## What This Indicator Does
+
+`Wyckoff - JOC (Jump Over Creek)` looks for a strong breakout above the recent range high, supported by increased volume and a larger-than-average candle body.
+
+In Wyckoff terms, the "creek" is the resistance area above the trading range. A Jump Over Creek means price pushes above that resistance with strength.
+
+This script defines that strength using three conditions:
+
+- Price closes above the recent range high.
+- Volume is higher than its moving average by a selected multiplier.
+- Candle body is larger than its average body size by a selected multiplier.
+
+## Core Logic
+
+1. Define the creek high:
+   - `creekHigh = ta.highest(high, lookback)`
+   - Default lookback is `50` bars
+   - This represents the recent resistance level
+
+2. Check volume expansion:
+   - `volMA = ta.sma(volume, volLength)`
+   - `volCond = volume > volMA * volMult`
+   - Default volume multiplier is `1.5`
+
+3. Check candle body strength:
+   - `body = math.abs(close - open)`
+   - `avgBody = ta.sma(math.abs(close - open), volLength)`
+   - `bodyCond = body > avgBody * bodyMult`
+   - Default body multiplier is `1.2`
+
+4. Confirm JOC:
+   - `joc = priceCond and volCond and bodyCond`
+   - All three conditions must be true
+
+## Signal Meaning
+
+| Element | Meaning |
+| --- | --- |
+| Blue line | Creek High, the recent resistance level |
+| Green `JOC` label | Price closed above Creek High with volume expansion and strong candle body |
+
+## Alert
+
+The script includes one alert condition:
+
+- `JOC`
+
+The alert message says that a JOC signal appeared, meaning price broke resistance with increased volume.
+
+## Important Notes
+
+- This script is Pine Script v6.
+- This is an indicator, not a strategy.
+- It does not create trades or produce Strategy Tester results.
+- `creekHigh` uses the highest high of the current lookback window, so the breakout condition is strict.
+- A JOC signal does not guarantee continuation. It only marks a breakout with volume and candle-body confirmation.
+- In real Wyckoff analysis, JOC is usually interpreted together with trading range context, spring, test, sign of strength, and backup action.
+
+## Practical Use
+
+This indicator can be used as a breakout confirmation tool:
+
+- Watch the blue Creek High line as the recent resistance area.
+- Use the green `JOC` label to identify strong breakout bars.
+- Confirm the signal with market structure, retest behavior, volume profile, or higher timeframe trend.
+- Use it as a signal component, not a complete trading system by itself.
+
+## File
+
+- `Wyckoff-JOC-Jump-Over-Creek.pine`
+
+## TradingView Usage
+
+1. Open TradingView Pine Editor.
+2. Paste the contents of `Wyckoff-JOC-Jump-Over-Creek.pine`.
+3. Add it to chart.

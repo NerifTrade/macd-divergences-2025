@@ -1,0 +1,31 @@
+//@version=6
+indicator("Wyckoff - JOC (Jump Over Creek)", overlay=true, max_bars_back=200)
+
+// 参数
+lookback     = input.int(50, "区间回溯长度", minval=10)
+volLength    = input.int(20, "成交量均线长度", minval=5)
+volMult      = input.float(1.5, "成交量放大倍数", minval=1.0, step=0.1)
+bodyMult     = input.float(1.2, "实体强度倍数 (相对均值)", minval=1.0, step=0.1)
+
+// 区间高点（溪流位置）
+creekHigh = ta.highest(high, lookback)
+
+// 成交量条件
+volMA = ta.sma(volume, volLength)
+volCond = volume > volMA * volMult
+
+// K线实体大小
+body = math.abs(close - open)
+avgBody = ta.sma(math.abs(close - open), volLength)
+bodyCond = body > avgBody * bodyMult
+
+// 突破条件（JOC）
+priceCond = close > creekHigh
+joc = priceCond and volCond and bodyCond
+
+// 绘图
+plot(creekHigh, "Creek High", color=color.new(color.blue, 70), style=plot.style_linebr, linewidth=2)
+plotshape(joc, title="JOC Signal", style=shape.labelup, color=color.green, text="JOC", location=location.belowbar, size=size.small)
+
+// 提示
+alertcondition(joc, title="JOC", message="JOC 信号出现（价格突破阻力并伴随量能放大）")
