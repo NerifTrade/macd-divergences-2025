@@ -1,0 +1,114 @@
+//@version=6
+indicator("Large Pullback Risk Model BTC 4H Tuned", shorttitle="BTC Pullback Risk", overlay=true, max_labels_count=100)
+// BTC 4H natural-fit defaults.
+// This model is designed for pullback-risk assessment after bullish extension.
+emaFastLen = input.int(100, "BTC EMA Fast Length", minval=1)
+emaMidLen = input.int(200, "BTC EMA Mid Length", minval=1)
+emaSlowLen = input.int(400, "BTC EMA Slow Length", minval=1)
+swingLookback = input.int(540, "BTC Impulse Lookback Bars", minval=50)
+atrLen = input.int(14, "ATR Length", minval=1)
+atrRankLen = input.int(540, "BTC ATR Percentile Lookback", minval=50)
+rsiLen = input.int(14, "RSI Length", minval=1)
+macdFast = input.int(12, "MACD Fast", minval=1)
+macdSlow = input.int(26, "MACD Slow", minval=1)
+macdSignal = input.int(9, "MACD Signal", minval=1)
+nerifLen = input.int(34, "NERIF MA Length", minval=1)
+nerifSignalLen = input.int(13, "NERIF Signal Length", minval=1)
+showZones = input.bool(true, "Show Pullback Zones")
+showTable = input.bool(true, "Show Risk Table")
+clamp(value, minValue, maxValue) =>
+    math.max(minValue, math.min(maxValue, value))
+zlema(src, length) =>
+    ema1 = ta.ema(src, length)
+    ema2 = ta.ema(ema1, length)
+    ema1 + (ema1 - ema2)
+emaFast = ta.ema(close, emaFastLen)
+emaMid = ta.ema(close, emaMidLen)
+emaSlow = ta.ema(close, emaSlowLen)
+bullTrend = close > emaSlow and emaFast > emaMid and emaMid > emaSlow
+bearTrend = close < emaSlow and emaFast < emaMid and emaMid < emaSlow
+nerifSrc = hlc3
+nerifHi = ta.rma(high, nerifLen)
+nerifLo = ta.rma(low, nerifLen)
+nerifMi = zlema(nerifSrc, nerifLen)
+nerifMd = nerifMi > nerifHi ? nerifMi - nerifHi : nerifMi < nerifLo ? nerifMi - nerifLo : 0.0
+nerifSb = ta.sma(nerifMd, nerifSignalLen)
+nerifSh = nerifMd - nerifSb
+nerifBullExpansion = nerifMd > 0
+nerifBearExpansion = nerifMd < 0
+nerifSideways = nerifMd == 0
+nerifCooling = nerifMd > 0 and nerifSh < nerifSh[1]
+nerifWeakening = nerifMd > 0 and nerifSh < 0
+atr = ta.atr(atrLen)
+atrPct = atr / close * 100.0
+atrRank = ta.percentrank(atrPct, atrRankLen)
+emaSlowDistancePct = (close / emaSlow - 1.0) * 100.0
+rsi = ta.rsi(close, rsiLen)
+[macdLine, macdSig, macdHist] = ta.macd(close, macdFast, macdSlow, macdSignal)
+macdFalling = macdHist < macdHist[1] and macdHist[1] < macdHist[2]
+macdWeakeningAboveZero = macdHist > 0 and macdFalling
+swingLow = ta.lowest(low, swingLookback)
+swingHigh = ta.highest(high, swingLookback)
+impulseRange = math.max(swingHigh - swingLow, syminfo.mintick)
+impulsePct = (swingHigh / swingLow - 1.0) * 100.0
+pricePositionInImpulse = (close - swingLow) / impulseRange * 100.0
+fib236 = swingHigh - impulseRange * 0.236
+fib382 = swingHigh - impulseRange * 0.382
+fib500 = swingHigh - impulseRange * 0.500
+fib618 = swingHigh - impulseRange * 0.618
+// BTC-tuned scoring.
+// Compared with the generic model, this version raises risk earlier in mature BTC 4H bull trends.
+extensionScore = bullTrend ? clamp(emaSlowDistancePct / 55.0 * 100.0, 0.0, 100.0) : 0.0
+volatilityScore = bullTrend ? clamp(atrRank, 0.0, 100.0) : 0.0
+rsiScore = bullTrend ? clamp((rsi - 50.0) / 28.0 * 100.0, 0.0, 100.0) : 0.0
+positionScore = bullTrend ? clamp((pricePositionInImpulse - 50.0) / 42.0 * 100.0, 0.0, 100.0) : 0.0
+macdScore = bullTrend and macdWeakeningAboveZero ? 92.0 : bullTrend and macdFalling ? 65.0 : bullTrend ? 25.0 : 0.0
+nerifScore = bullTrend and nerifWeakening ? 95.0 : bullTrend and nerifCooling ? 78.0 : bullTrend and nerifBullExpansion ? 45.0 : bullTrend and nerifSideways ? 58.0 : 20.0
+riskScore = clamp(
+     extensionScore * 0.26
+   + volatilityScore * 0.15
+   + rsiScore * 0.13
+   + positionScore * 0.16
+   + macdScore * 0.15
+   + nerifScore * 0.15,
+   0.0,
+   100.0
+)
+riskLevel = riskScore >= 75 ? "Extreme" : riskScore >= 60 ? "High" : riskScore >= 40 ? "Moderate" : riskScore >= 25 ? "Low" : "Very Low"
+riskColor = riskScore >= 75 ? color.red : riskScore >= 60 ? color.orange : riskScore >= 40 ? color.yellow : riskScore >= 25 ? color.teal : color.green
+trendText = bullTrend ? "BTC Bull Trend" : bearTrend ? "BTC Bear Trend" : "Mixed / Range"
+nerifText = nerifBullExpansion ? "Bull Expansion" : nerifBearExpansion ? "Bear Expansion" : "Sideways"
+momentumText = macdWeakeningAboveZero ? "Weakening" : macdFalling ? "Falling" : "Stable"
+plot(emaFast, "BTC EMA Fast", color=color.new(color.aqua, 0), linewidth=1)
+plot(emaMid, "BTC EMA Mid", color=color.new(color.blue, 0), linewidth=1)
+plot(emaSlow, "BTC EMA Slow", color=color.new(color.purple, 0), linewidth=2)
+plot(showZones ? fib236 : na, "Pullback 0.236", color=color.new(color.gray, 45), linewidth=1)
+plot(showZones ? fib382 : na, "Pullback 0.382", color=color.new(color.yellow, 20), linewidth=1)
+plot(showZones ? fib500 : na, "Pullback 0.500", color=color.new(color.orange, 20), linewidth=1)
+plot(showZones ? fib618 : na, "Pullback 0.618", color=color.new(color.red, 15), linewidth=1)
+bgcolor(riskScore >= 75 ? color.new(color.red, 88) : riskScore >= 60 ? color.new(color.orange, 90) : na)
+var table riskTable = table.new(position.top_right, 2, 10, border_width=1)
+if showTable and barstate.islast
+    table.cell(riskTable, 0, 0, "BTC Pullback Risk", text_color=color.white, bgcolor=riskColor)
+    table.cell(riskTable, 1, 0, str.tostring(riskScore, "#.0") + " / 100", text_color=color.white, bgcolor=riskColor)
+    table.cell(riskTable, 0, 1, "Risk Level")
+    table.cell(riskTable, 1, 1, riskLevel)
+    table.cell(riskTable, 0, 2, "Trend")
+    table.cell(riskTable, 1, 2, trendText)
+    table.cell(riskTable, 0, 3, "NERIF")
+    table.cell(riskTable, 1, 3, nerifText)
+    table.cell(riskTable, 0, 4, "Momentum")
+    table.cell(riskTable, 1, 4, momentumText)
+    table.cell(riskTable, 0, 5, "EMA400 Dist")
+    table.cell(riskTable, 1, 5, str.tostring(emaSlowDistancePct, "#.0") + "%")
+    table.cell(riskTable, 0, 6, "ATR Rank")
+    table.cell(riskTable, 1, 6, str.tostring(atrRank, "#.0"))
+    table.cell(riskTable, 0, 7, "RSI")
+    table.cell(riskTable, 1, 7, str.tostring(rsi, "#.0"))
+    table.cell(riskTable, 0, 8, "Impulse")
+    table.cell(riskTable, 1, 8, str.tostring(impulsePct, "#.0") + "%")
+    table.cell(riskTable, 0, 9, "Zones")
+    table.cell(riskTable, 1, 9, str.tostring(fib382, format.mintick) + " / " + str.tostring(fib500, format.mintick))
+alertcondition(riskScore >= 60 and riskScore[1] < 60, "BTC Pullback Risk High", "BTC 4H Large Pullback Risk moved into High zone.")
+alertcondition(riskScore >= 75 and riskScore[1] < 75, "BTC Pullback Risk Extreme", "BTC 4H Large Pullback Risk moved into Extreme zone.")
+alertcondition(nerifCooling and bullTrend, "BTC NERIF Bull Expansion Cooling", "BTC 4H NERIF bullish expansion is cooling.")

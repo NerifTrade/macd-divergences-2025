@@ -11,6 +11,7 @@ This repository currently contains:
 - `Volume-Recent-vs-Previous-v1.0.pine`
 - `MA-16.pine`
 - `Heikin-ma50.pine`
+- `Large-Pullback-Risk-Model-BTC-4H-Tuned.pine`
 
 These scripts are indicators, not automated trading strategies. They do not place orders, calculate position sizing, or produce TradingView Strategy Tester backtest results by themselves.
 
@@ -626,3 +627,128 @@ This indicator can be used as a Heikin Ashi trend-strength marker:
 1. Open TradingView Pine Editor.
 2. Paste the contents of `Heikin-ma50.pine`.
 3. Add it to chart.
+
+## 8. Large Pullback Risk Model BTC 4H Tuned
+
+TradingView Pine v6 overlay indicator for assessing large pullback risk on BTC 4H after bullish extension.
+
+## What This Indicator Does
+
+`Large Pullback Risk Model BTC 4H Tuned` builds a 0-100 pullback risk score for BTC 4H conditions.
+
+The model is not trying to predict an exact top. It is designed to identify when a BTC bullish move is mature, extended, volatile, and showing early momentum or NERIF cooling signals.
+
+It combines:
+
+- EMA trend structure
+- Distance from EMA400
+- ATR percentile rank
+- RSI strength
+- Price position inside the recent impulse range
+- MACD histogram weakness
+- NERIF expansion, cooling, or weakening state
+
+## Core Logic
+
+1. Trend filter:
+   - Bull trend requires close above EMA400
+   - EMA100 must be above EMA200
+   - EMA200 must be above EMA400
+   - Bear trend uses the opposite EMA structure
+
+2. BTC-tuned impulse range:
+   - Uses `swingLookback`, default `540` bars
+   - Finds the recent swing low and swing high
+   - Calculates the impulse percentage move
+   - Calculates where current price sits inside that impulse
+
+3. Pullback zones:
+   - `0.236`
+   - `0.382`
+   - `0.500`
+   - `0.618`
+
+4. Momentum checks:
+   - MACD histogram falling for consecutive bars
+   - MACD weakening while still above zero
+   - NERIF bull expansion, cooling, weakening, bear expansion, or sideways state
+
+5. Risk scoring:
+   - Extension score: distance from EMA400
+   - Volatility score: ATR percentile rank
+   - RSI score: RSI above 50
+   - Position score: price position in the impulse
+   - MACD score: momentum weakening
+   - NERIF score: NERIF cooling or weakening
+
+## Risk Score Weights
+
+| Component | Weight |
+| --- | --- |
+| EMA400 extension | `26%` |
+| ATR rank | `15%` |
+| RSI | `13%` |
+| Impulse position | `16%` |
+| MACD weakness | `15%` |
+| NERIF state | `15%` |
+
+The final score is clamped between `0` and `100`.
+
+## Risk Levels
+
+| Risk score | Risk level |
+| --- | --- |
+| `75+` | Extreme |
+| `60-74.9` | High |
+| `40-59.9` | Moderate |
+| `25-39.9` | Low |
+| Below `25` | Very Low |
+
+## Visual Output
+
+| Element | Meaning |
+| --- | --- |
+| Aqua line | BTC EMA fast, default EMA100 |
+| Blue line | BTC EMA mid, default EMA200 |
+| Purple line | BTC EMA slow, default EMA400 |
+| Pullback zone lines | 0.236, 0.382, 0.500, 0.618 retracement levels |
+| Orange background | Risk score is High |
+| Red background | Risk score is Extreme |
+| Risk table | Shows score, level, trend, NERIF state, momentum, EMA400 distance, ATR rank, RSI, impulse, and zones |
+
+## Alerts
+
+The script includes three alert conditions:
+
+- `BTC Pullback Risk High`: triggers when risk score enters the High zone.
+- `BTC Pullback Risk Extreme`: triggers when risk score enters the Extreme zone.
+- `BTC NERIF Bull Expansion Cooling`: triggers when NERIF bullish expansion is cooling during a BTC bull trend.
+
+## Important Notes
+
+- This script is Pine Script v6.
+- This is an indicator, not a strategy.
+- It does not create trades or produce Strategy Tester results.
+- The defaults are tuned for BTC 4H, so other markets or timeframes may need different settings.
+- A High or Extreme risk score does not mean price must immediately reverse. It means pullback risk has increased based on this model.
+- The model is mainly useful after bullish extension, not as a standalone short signal.
+
+## Practical Use
+
+This indicator can be used as a risk dashboard:
+
+- Monitor whether BTC 4H is becoming extended above EMA400.
+- Watch whether ATR rank and RSI are elevated during a mature impulse.
+- Use NERIF and MACD cooling as early warnings that bullish expansion may be weakening.
+- Use the pullback zone lines as possible reference areas if a retracement starts.
+- Combine with market structure, liquidity levels, support/resistance, and position management rules before making trading decisions.
+
+## File
+
+- `Large-Pullback-Risk-Model-BTC-4H-Tuned.pine`
+
+## TradingView Usage
+
+1. Open TradingView Pine Editor.
+2. Paste the contents of `Large-Pullback-Risk-Model-BTC-4H-Tuned.pine`.
+3. Add it to BTC 4H chart.
