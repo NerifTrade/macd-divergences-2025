@@ -1,0 +1,38 @@
+//@version=5
+indicator("基差套利指标 (主图+副图)", overlay=false)
+
+// 用户可以选择不同的K线周期
+timeframe_input = input.timeframe("1D", title="选择K线周期")
+
+// 获取现货价格和期货价格（用户可自定义）
+spot_symbol = input.symbol("BINANCE:BTCUSDT", title="现货市场")
+future_symbol = input.symbol("BINANCE:BTCUSDTPERP", title="期货市场")
+malength=input(9,'malength')
+
+// 获取现货和期货的价格，使用用户选择的K线周期
+spot_price = request.security(spot_symbol, timeframe_input, close)
+future_price = request.security(future_symbol, timeframe_input, close)
+
+// 计算基差
+basis = spot_price - future_price
+
+basisMA=ta.sma(basis,malength)
+
+
+// 主图部分：定义买入/卖出信号
+longCondition = basis < 0  // 负基差，期货价格高于现货价格，看涨
+shortCondition = basis > 0 // 正基差，现货价格高于期货价格，看跌
+
+
+
+
+// 绘制零轴
+hline(0, "零轴", color=color.gray)
+
+mabool=basisMA>0
+// 在副图中绘制基差
+plot(basis, color=basis > 0 ? color.red : color.green, linewidth=2, title="基差变化")
+plot(basisMA, color=basisMA>basis ? color.yellow : color.blue, linewidth=2, title="基差ma")
+
+// 上色背景，根据基差的正负来区分
+bgcolor(mabool ? color.new(color.red, 90) : color.new(color.green, 90), title="背景颜色")

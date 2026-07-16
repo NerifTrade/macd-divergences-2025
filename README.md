@@ -13,6 +13,7 @@ This repository currently contains:
 - `Heikin-ma50.pine`
 - `Large-Pullback-Risk-Model-BTC-4H-Tuned.pine`
 - `Wyckoff-JOC-Jump-Over-Creek.pine`
+- `Basis-Arbitrage-Indicator.pine`
 
 These scripts are indicators, not automated trading strategies. They do not place orders, calculate position sizing, or produce TradingView Strategy Tester backtest results by themselves.
 
@@ -833,4 +834,90 @@ This indicator can be used as a breakout confirmation tool:
 
 1. Open TradingView Pine Editor.
 2. Paste the contents of `Wyckoff-JOC-Jump-Over-Creek.pine`.
+3. Add it to chart.
+
+## 10. Basis Arbitrage Indicator
+
+TradingView Pine v5 indicator for monitoring the price basis between a spot market and a futures/perpetual market.
+
+## What This Indicator Does
+
+`基差套利指标 (主图+副图)` compares the selected spot symbol against the selected futures symbol on a chosen timeframe.
+
+The script calculates:
+
+- Spot close price
+- Futures close price
+- Basis: `spot_price - future_price`
+- Basis moving average
+
+It then plots the basis and its moving average in a separate panel.
+
+## Core Logic
+
+1. Select timeframe:
+   - Default timeframe is `1D`
+   - User can change it through `timeframe_input`
+
+2. Select symbols:
+   - Default spot symbol: `BINANCE:BTCUSDT`
+   - Default futures symbol: `BINANCE:BTCUSDTPERP`
+
+3. Pull both prices:
+   - Uses `request.security()` to get spot close
+   - Uses `request.security()` to get futures close
+
+4. Calculate basis:
+   - `basis = spot_price - future_price`
+
+5. Smooth basis:
+   - `basisMA = ta.sma(basis, malength)`
+   - Default MA length is `9`
+
+## Signal Meaning
+
+| Basis state | Meaning |
+| --- | --- |
+| `basis > 0` | Spot price is higher than futures price |
+| `basis < 0` | Futures price is higher than spot price |
+| `basis = 0` | Spot and futures prices are equal on the selected timeframe close |
+
+## Visual Output
+
+| Element | Meaning |
+| --- | --- |
+| Gray zero line | Basis neutral level |
+| Red basis line | Positive basis |
+| Green basis line | Negative basis |
+| Yellow basis MA | Basis MA is above current basis |
+| Blue basis MA | Basis MA is not above current basis |
+| Red background | Basis MA is above zero |
+| Green background | Basis MA is below or equal to zero |
+
+## Important Notes
+
+- This script is Pine Script v5.
+- This is an indicator, not a strategy.
+- It does not execute arbitrage, place orders, or calculate funding/fees/slippage.
+- `longCondition` and `shortCondition` are defined in the code but not plotted or used for strategy orders.
+- True basis or arbitrage analysis should also consider funding rate, borrow cost, trading fees, contract type, liquidity, execution latency, and exchange risk.
+- The meaning of positive or negative basis depends on the exact symbols selected and how the futures/perpetual contract is quoted.
+
+## Practical Use
+
+This indicator can be used as a basis monitoring panel:
+
+- Track whether spot is trading above or below the selected futures/perpetual market.
+- Watch whether basis is expanding or compressing through the basis MA.
+- Use the background color to quickly identify whether the smoothed basis is positive or negative.
+- Combine with funding-rate data and execution rules before considering any arbitrage workflow.
+
+## File
+
+- `Basis-Arbitrage-Indicator.pine`
+
+## TradingView Usage
+
+1. Open TradingView Pine Editor.
+2. Paste the contents of `Basis-Arbitrage-Indicator.pine`.
 3. Add it to chart.
