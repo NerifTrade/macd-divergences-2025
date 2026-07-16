@@ -8,6 +8,7 @@ This repository currently contains:
 - `0800-Open-Cross.pine`
 - `NERIF-MACD-v10-16-Relations.pine`
 - `Upside-Strength-Exhaustion-v1.1.pine`
+- `Volume-Recent-vs-Previous-v1.0.pine`
 
 These scripts are indicators, not automated trading strategies. They do not place orders, calculate position sizing, or produce TradingView Strategy Tester backtest results by themselves.
 
@@ -382,4 +383,91 @@ This indicator can be used as a risk-warning layer:
 
 1. Open TradingView Pine Editor.
 2. Paste the contents of `Upside-Strength-Exhaustion-v1.1.pine`.
+3. Add it to chart.
+
+## 5. Volume Recent vs Previous v1.0
+
+TradingView Pine v6 indicator for comparing recent average volume against the previous equal-length volume window.
+
+## What This Indicator Does
+
+`Volume Recent vs Previous v1.0` checks whether the latest `N` bars are trading with weaker volume than the previous `N` bars.
+
+It is designed as a simple volume weakening detector:
+
+- Recent volume average: current `N` bars
+- Previous volume average: the `N` bars before the recent window
+- Volume ratio: recent average volume divided by previous average volume
+- Weak volume signal: ratio is below the selected threshold
+
+This indicator is plotted in a separate panel because `overlay=false`.
+
+## Core Logic
+
+1. Set comparison length:
+   - `volCompareN` defaults to `30`
+   - This means the script compares the latest 30 bars against the prior 30 bars
+
+2. Calculate recent volume:
+   - `recentVolAvg = ta.sma(volume, volCompareN)`
+   - This is the average volume of the current window
+
+3. Calculate previous volume:
+   - `previousVolAvg = ta.sma(volume[volCompareN], volCompareN)`
+   - This is the average volume of the previous window
+
+4. Calculate ratio:
+   - `volumeRatio = recentVolAvg / previousVolAvg`
+   - If previous volume is zero or unavailable, ratio becomes `na`
+
+5. Detect weak volume:
+   - `volumeWeak = volumeRatio < weakThreshold`
+   - Default threshold is `0.80`
+   - A ratio below `0.80` means recent average volume is less than 80% of the previous window average
+
+## Visual Output
+
+| Element | Meaning |
+| --- | --- |
+| Aqua line | Recent `N`-bar average volume |
+| Orange line | Previous `N`-bar average volume |
+| Purple ratio | Recent / previous volume ratio, shown in the data window |
+| Red dashed horizontal line | Weak ratio threshold |
+| Red `V` marker | Recent volume is weak |
+| Red background | Weak volume condition is active |
+| Table | Shows `N`, recent average, previous average, and ratio |
+
+## Alert
+
+The script includes this alert condition:
+
+- `Recent Volume Weak`
+
+The alert triggers when recent `N`-bar average volume is weaker than the previous `N`-bar average volume based on the configured threshold.
+
+## Important Notes
+
+- This script is Pine Script v6.
+- This is an indicator, not a strategy.
+- It does not create buy/sell trades or Strategy Tester results.
+- Weak volume does not automatically mean price must reverse. It only says recent participation is lower than the previous comparison window.
+- The signal is most useful when combined with price structure, trend context, breakout/rejection zones, or exhaustion indicators.
+
+## Practical Use
+
+This indicator can be used as a market participation filter:
+
+- Confirm whether an upside move is losing volume support.
+- Check whether a breakout has weaker volume than the previous phase.
+- Use the red `V` marker as a warning that recent activity has dropped below the selected threshold.
+- Combine it with momentum, range, support/resistance, or your own trading rules before making decisions.
+
+## File
+
+- `Volume-Recent-vs-Previous-v1.0.pine`
+
+## TradingView Usage
+
+1. Open TradingView Pine Editor.
+2. Paste the contents of `Volume-Recent-vs-Previous-v1.0.pine`.
 3. Add it to chart.
