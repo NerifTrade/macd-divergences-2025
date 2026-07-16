@@ -7,6 +7,7 @@ This repository currently contains:
 - `MACD-Divergences-2025.pine`
 - `0800-Open-Cross.pine`
 - `NERIF-MACD-v10-16-Relations.pine`
+- `Upside-Strength-Exhaustion-v1.1.pine`
 
 These scripts are indicators, not automated trading strategies. They do not place orders, calculate position sizing, or produce TradingView Strategy Tester backtest results by themselves.
 
@@ -280,4 +281,105 @@ This indicator is useful for reviewing MACD cross structure:
 
 1. Open TradingView Pine Editor.
 2. Paste the contents of `NERIF-MACD-v10-16-Relations.pine`.
+3. Add it to chart.
+
+## 4. Upside Strength Exhaustion v1.1
+
+TradingView Pine v6 overlay indicator for detecting possible upside strength exhaustion.
+
+## What This Indicator Does
+
+`Upside Strength Exhaustion v1.1` tries to identify when price is already in the upper area of its recent range, but the quality of the upside move is weakening.
+
+It combines several conditions into an exhaustion score:
+
+- Price position near the high area of the lookback range.
+- Recent volume weaker than previous volume.
+- Recent upside efficiency weaker than previous upside efficiency.
+- Optional MACD histogram weakness.
+- Optional RSI weakness.
+- Optional upper-wick rejection.
+
+The indicator then marks the chart with three signal levels: watch, strong exhaustion, and critical exhaustion.
+
+## Core Logic
+
+1. Calculate recent price range:
+   - Highest high over `lookbackHighLength`
+   - Lowest low over `lookbackHighLength`
+   - Price position inside that high-low range
+   - Price is considered high when it is above the configured `priceHighThreshold`
+
+2. Measure volume weakness:
+   - Recent average volume over `compareWindow`
+   - Previous average volume over the prior `compareWindow`
+   - `volumeRatio = recentVolumeAverage / previousVolumeAverage`
+   - Volume is weak when the ratio is below `volumeWeakThreshold`
+
+3. Measure upside efficiency:
+   - Recent upside move is compared with the previous upside move
+   - Each upside move is divided by its average volume
+   - Efficiency is weak when recent upside efficiency is below the configured `efficiencyWeakThreshold`
+
+4. Optional weakness filters:
+   - MACD weakness: MACD histogram is falling
+   - RSI weakness: RSI is falling
+   - Upper-wick weakness: upper wick is at least `35%` of the candle range
+
+5. Build exhaustion score:
+   - Each active weakness condition adds to the score
+   - Higher score means stronger evidence of upside exhaustion
+
+## Signal Levels
+
+| Signal | Chart marker | Condition summary |
+| --- | --- | --- |
+| Watch | Yellow circle with `W` | Score is at least `2` and price is in the high area |
+| Strong | Orange square with `S` | Score is at least `3`, price is high, volume is weak, and upside efficiency is weak |
+| Critical | Red label with `C` | Score is at least `4`, price is high, volume is weak, efficiency is weak, and momentum/rejection weakness is present |
+
+The background color also changes:
+
+- Yellow background: watch condition
+- Orange background: strong exhaustion
+- Red background: critical exhaustion
+
+## Visual Output
+
+| Element | Meaning |
+| --- | --- |
+| `HH` line | Highest high over the lookback range |
+| `LL` line | Lowest low over the lookback range |
+| Yellow threshold line | Price high-area threshold |
+| `W` marker | Early upside exhaustion watch |
+| `S` marker | Stronger exhaustion warning |
+| `C` marker | Critical exhaustion warning |
+| Diagnostic table | Shows score, price position, and volume ratio |
+
+## Important Notes
+
+- This script is Pine Script v6.
+- This is an indicator, not a strategy.
+- It does not create trades or generate Strategy Tester results.
+- It is designed to warn about possible upside exhaustion, not to automatically short the market.
+- The signal can appear while price is still trending up, because exhaustion does not always mean immediate reversal.
+- The uploaded source currently ends after the first diagnostic table rows. If the original script had more table rows, they were not included in the uploaded attachment.
+
+## Practical Use
+
+This indicator can be used as a risk-warning layer:
+
+- Use `W` as an early caution signal when price is high and several weakness conditions appear.
+- Use `S` as a stronger warning that volume and upside efficiency are both weakening.
+- Use `C` as a high-risk exhaustion warning when momentum or wick rejection also confirms weakness.
+- Combine with trend structure, support/resistance, liquidity levels, or your own exit rules before making trading decisions.
+
+## File
+
+- `Upside-Strength-Exhaustion-v1.1.pine`
+
+## TradingView Usage
+
+1. Open TradingView Pine Editor.
+2. Paste the contents of `Upside-Strength-Exhaustion-v1.1.pine`.
 3. Add it to chart.

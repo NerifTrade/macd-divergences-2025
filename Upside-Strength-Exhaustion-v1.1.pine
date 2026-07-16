@@ -1,0 +1,83 @@
+//@version=6
+indicator("Upside Strength Exhaustion v1.1", shorttitle="USEX11", overlay=true)
+// Inputs
+lookbackHighLength = input.int(100, "High-Low Lookback Length", minval=2)
+compareWindow = input.int(30, "Compare Window", minval=2)
+volumeWeakThreshold = input.float(0.80, "Volume Weak Threshold", minval=0.01, step=0.01)
+efficiencyWeakThreshold = input.float(0.70, "Efficiency Weak Threshold", minval=0.01, step=0.01)
+priceHighThreshold = input.float(0.80, "Price High Threshold", minval=0.01, maxval=1.00, step=0.01)
+useMACDFilter = input.bool(true, "Use MACD Weakness Filter")
+useRSIFilter = input.bool(false, "Use RSI Weakness Filter")
+useUpperWickFilter = input.bool(true, "Use Upper Wick Filter")
+showTable = input.bool(true, "Show Diagnostic Table")
+showRange = input.bool(true, "Show HH / LL / High Area")
+// Helpers
+safeDivide(float numerator, float denominator, float fallback) =>
+    denominator != 0.0 and not na(denominator) ? numerator / denominator : fallback
+// Price range calculation
+hh = ta.highest(high, lookbackHighLength)
+ll = ta.lowest(low, lookbackHighLength)
+rangeValue = math.max(hh - ll, syminfo.mintick)
+priceHighArea = ll + rangeValue * priceHighThreshold
+pricePosition = safeDivide(close - ll, rangeValue, 0.0)
+priceHigh = pricePosition >= priceHighThreshold
+// Volume exhaustion calculation
+recentVolumeAverage = ta.sma(volume, compareWindow)
+previousVolumeAverage = ta.sma(volume[compareWindow], compareWindow)
+volumeRatio = safeDivide(recentVolumeAverage, previousVolumeAverage, na)
+volumeWeak = not na(volumeRatio) and volumeRatio < volumeWeakThreshold
+// Upside movement calculation
+recentMove = close - close[compareWindow]
+previousMove = close[compareWindow] - close[compareWindow * 2]
+recentUpsideMove = math.max(recentMove, 0.0)
+previousUpsideMove = math.max(previousMove, 0.0)
+// Upside efficiency calculation
+recentUpsideEfficiency = safeDivide(recentUpsideMove, recentVolumeAverage, 0.0)
+previousUpsideEfficiency = safeDivide(previousUpsideMove, previousVolumeAverage, na)
+validPreviousEfficiency = not na(previousUpsideEfficiency) and previousUpsideEfficiency > 0.0
+efficiencyRatio = validPreviousEfficiency ? recentUpsideEfficiency / previousUpsideEfficiency : na
+efficiencyWeak = validPreviousEfficiency and efficiencyRatio < efficiencyWeakThreshold
+// Optional MACD weakness
+[macdLine, macdSignal, macdHist] = ta.macd(close, 12, 26, 9)
+macdWeak = macdHist < macdHist[1]
+macdCondition = not useMACDFilter or macdWeak
+// Optional RSI weakness
+rsi = ta.rsi(close, 14)
+rsiWeak = rsi < rsi[1]
+rsiCondition = not useRSIFilter or rsiWeak
+// Optional upper wick weakness
+barRange = math.max(high - low, syminfo.mintick)
+upperWick = high - math.max(open, close)
+upperWickRatio = safeDivide(upperWick, barRange, 0.0)
+upperWickWeak = upperWickRatio >= 0.35
+upperWickCondition = not useUpperWickFilter or upperWickWeak
+// Exhaustion score
+score = 0
+score += priceHigh ? 1 : 0
+score += volumeWeak ? 1 : 0
+score += efficiencyWeak ? 1 : 0
+score += useMACDFilter and macdWeak ? 1 : 0
+score += useRSIFilter and rsiWeak ? 1 : 0
+score += useUpperWickFilter and upperWickWeak ? 1 : 0
+momentumOrRejectionWeak = (useMACDFilter and macdWeak) or (useRSIFilter and rsiWeak) or (useUpperWickFilter and upperWickWeak)
+// Signal levels
+exhaustionWatch = score >= 2 and priceHigh
+strongExhaustion = score >= 3 and priceHigh and volumeWeak and efficiencyWeak
+criticalExhaustion = score >= 4 and priceHigh and volumeWeak and efficiencyWeak and momentumOrRejectionWeak
+// Plots
+plot(showRange ? hh : na, "HH", color=color.new(color.gray, 25), linewidth=1)
+plot(showRange ? ll : na, "LL", color=color.new(color.gray, 25), linewidth=1)
+plot(showRange ? priceHighArea : na, "Price High Area Threshold", color=color.new(color.yellow, 0), linewidth=2)
+plotshape(exhaustionWatch and not strongExhaustion, title="Exhaustion Watch", style=shape.circle, location=location.abovebar, color=color.new(color.yellow, 0), size=size.tiny, text="W")
+plotshape(strongExhaustion and not criticalExhaustion, title="Strong Exhaustion", style=shape.square, location=location.abovebar, color=color.new(color.orange, 0), size=size.small, text="S")
+plotshape(criticalExhaustion, title="Critical Exhaustion", style=shape.labeldown, location=location.abovebar, color=color.new(color.red, 0), textcolor=color.white, size=size.small, text="C")
+bgcolor(criticalExhaustion ? color.new(color.red, 86) : strongExhaustion ? color.new(color.orange, 90) : exhaustionWatch ? color.new(color.yellow, 92) : na, title="Exhaustion Background")
+// Diagnostic table
+var table diagTable = table.new(position.top_right, 2, 12, border_width=1)
+if showTable and barstate.islast
+    table.cell(diagTable, 0, 0, "Upside Exhaustion", text_color=color.white, bgcolor=criticalExhaustion ? color.red : strongExhaustion ? color.orange : exhaustionWatch ? color.yellow : color.gray)
+    table.cell(diagTable, 1, 0, "Score " + str.tostring(score), text_color=color.white, bgcolor=criticalExhaustion ? color.red : strongExhaustion ? color.orange : exhaustionWatch ? color.yellow : color.gray)
+    table.cell(diagTable, 0, 1, "Price Position")
+    table.cell(diagTable, 1, 1, str.tostring(pricePosition * 100.0, "#.0") + "%")
+    table.cell(diagTable, 0, 2, "Volume Ratio")
+    table.cell(diagTable, 1, 2, na(volumeRatio) ? "n/a" : str.tostring(volumeRatio, "#.00"))
