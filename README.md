@@ -10,6 +10,7 @@ This repository currently contains:
 - `Upside-Strength-Exhaustion-v1.1.pine`
 - `Volume-Recent-vs-Previous-v1.0.pine`
 - `MA-16.pine`
+- `Heikin-ma50.pine`
 
 These scripts are indicators, not automated trading strategies. They do not place orders, calculate position sizing, or produce TradingView Strategy Tester backtest results by themselves.
 
@@ -547,4 +548,81 @@ This indicator can be used as a trend-position filter:
 
 1. Open TradingView Pine Editor.
 2. Paste the contents of `MA-16.pine`.
+3. Add it to chart.
+
+## 7. Heikin-ma50
+
+TradingView Pine v3 overlay indicator that combines Heikin Ashi candle structure with a 50-period simple moving average.
+
+## What This Indicator Does
+
+`Heikin-ma50` marks strong Heikin Ashi candles when they are fully separated from the selected moving average.
+
+Default settings:
+
+- Moving average length: `50`
+- Candle body threshold: `2%`
+
+The script pulls Heikin Ashi OHLC values from the current symbol and timeframe, plots a simple moving average on the normal close price, then marks candles that meet bullish or bearish Heikin Ashi strength conditions.
+
+## Core Logic
+
+1. Load Heikin Ashi data:
+   - `ha_open`
+   - `ha_high`
+   - `ha_close`
+   - `ha_low`
+
+2. Calculate moving average:
+   - `sma1 = sma(close, length1)`
+   - Default `length1` is `50`
+
+3. Bullish signal condition:
+   - MA is below the Heikin Ashi close
+   - Heikin Ashi low is at or above Heikin Ashi open
+   - Heikin Ashi candle body is larger than the selected percentage threshold
+   - MA is below the Heikin Ashi low
+   - When all are true, the script plots a blue flag above the bar
+
+4. Bearish signal condition:
+   - MA is above the Heikin Ashi close
+   - Heikin Ashi high is at or below Heikin Ashi open
+   - Heikin Ashi candle body is negative and larger than the selected percentage threshold
+   - MA is above the Heikin Ashi high
+   - When all are true, the script plots an orange diamond below the bar
+
+## Signal Meaning
+
+| Signal | Condition | Meaning |
+| --- | --- | --- |
+| Blue flag | Strong bullish Heikin Ashi candle above MA | Bullish strength above the moving average |
+| Orange diamond | Strong bearish Heikin Ashi candle below MA | Bearish strength below the moving average |
+
+## Important Notes
+
+- This script uses Pine Script v3.
+- This is an indicator, not a strategy.
+- It does not place trades or produce Strategy Tester results.
+- The script uses Heikin Ashi OHLC data through `security(heikinashi(tickerid), period, ...)`.
+- The moving average is calculated from normal `close`, not `ha_close`.
+- The signal requires the full Heikin Ashi candle to be separated from the moving average.
+- `dropn()` is defined but not used in the active logic.
+
+## Practical Use
+
+This indicator can be used as a Heikin Ashi trend-strength marker:
+
+- Use the blue flag to identify strong bullish Heikin Ashi candles above the MA.
+- Use the orange diamond to identify strong bearish Heikin Ashi candles below the MA.
+- Adjust `check rate%` to require larger or smaller Heikin Ashi candle bodies.
+- Combine it with trend structure, support/resistance, volume, or exit rules before making trading decisions.
+
+## File
+
+- `Heikin-ma50.pine`
+
+## TradingView Usage
+
+1. Open TradingView Pine Editor.
+2. Paste the contents of `Heikin-ma50.pine`.
 3. Add it to chart.

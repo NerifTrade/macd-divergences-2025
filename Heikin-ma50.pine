@@ -1,0 +1,28 @@
+//@version=3
+study(title="Heikin-ma50", shorttitle="Heikin-ma50", overlay=true)
+
+dropn(src, n) =>
+    na(src[n]) ? na : src
+ha_t = heikinashi(tickerid)
+ha_open = security(ha_t, period, open)
+ha_high = security(ha_t, period, high)
+ha_close = security(ha_t, period, close)
+ha_low = security(ha_t, period, low)
+
+
+length1 = input(50, title="MA-1 period", minval=1)
+
+sma1=sma(close, length1)
+
+rate = input(2, title="check rate%", minval=0.1)
+
+
+plot(sma1, title="MA-1", color=#f5eb5d, transp=0, linewidth=2)
+
+checkUP=true
+
+dataup=(sma1[0]<ha_close[0] and ha_low[0]>=ha_open[0] and (ha_close[0]-ha_open[0])>ha_close[0]*rate/100 and sma1[0]<ha_low[0])
+plotshape(dataup, style=shape.flag,location=location.abovebar, color=blue,title='up alert')
+
+datadown=(sma1[0]>ha_close[0] and ha_high[0]<=ha_open[0] and (ha_close[0]-ha_open[0])<-(ha_close[0]*rate/100) and sma1[0]>ha_high[0])
+plotshape(datadown, style=shape.diamond,location=location.belowbar, color=orange,title='down alert')
