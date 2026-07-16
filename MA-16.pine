@@ -1,0 +1,29 @@
+//@version=3
+study(title="MA 16", shorttitle="MA 16", overlay=true)
+
+dropn(src, n) =>
+    na(src[n]) ? na : src
+
+length1 = input(240, title="MA-1 period", minval=1)
+length2 = input(480, title="MA-2 period", minval=1)
+checkLen = input(16, title="check period", minval=1)
+
+src = input(close, type=source, title="Source")
+dropCandles = input(1, minval=0, title="Drop first N candles")
+
+//price = dropn(src, dropCandles)
+sma1=sma(close, length1)
+sma2=sma(close, length2)
+plot(sma(close, length1), title="MA-1", color=#f5eb5d, transp=0, linewidth=2)
+plot(sma(close, length2), title="MA-2", color=#f5b771, transp=0, linewidth=2)
+checkUP=true
+
+for i=1 to checkLen
+    checkUP:=checkUP and (low[i]>sma1[i] and low[i]>sma2[i]) and (low[0]>sma1[0] and low[0]>sma2[0])
+//checkUP=close[16]>sma1[16] and close[16]>sma2[16]
+plotshape(checkUP, style=shape.triangleup,location=location.abovebar, color=green)
+
+checkDown=true
+for i=1 to checkLen
+    checkDown:=checkDown and (high[i]<sma1[i] and high[i]<sma2[i]) and (high[0]<sma1[0] and high[0]<sma2[0])
+plotshape(checkDown, style=shape.triangledown,location=location.belowbar, color=red)

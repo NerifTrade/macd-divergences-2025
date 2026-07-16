@@ -9,6 +9,7 @@ This repository currently contains:
 - `NERIF-MACD-v10-16-Relations.pine`
 - `Upside-Strength-Exhaustion-v1.1.pine`
 - `Volume-Recent-vs-Previous-v1.0.pine`
+- `MA-16.pine`
 
 These scripts are indicators, not automated trading strategies. They do not place orders, calculate position sizing, or produce TradingView Strategy Tester backtest results by themselves.
 
@@ -470,4 +471,80 @@ This indicator can be used as a market participation filter:
 
 1. Open TradingView Pine Editor.
 2. Paste the contents of `Volume-Recent-vs-Previous-v1.0.pine`.
+3. Add it to chart.
+
+## 6. MA 16
+
+TradingView Pine v3 overlay indicator for checking whether price has stayed fully above or fully below two long simple moving averages for a defined number of bars.
+
+## What This Indicator Does
+
+`MA 16` plots two simple moving averages and then checks whether the recent candles are consistently positioned above or below both moving averages.
+
+Default settings:
+
+- `MA-1`: 240-period SMA
+- `MA-2`: 480-period SMA
+- `check period`: 16 bars
+
+The core idea is simple:
+
+- If the low of every checked candle is above both moving averages, the script marks an upward triangle.
+- If the high of every checked candle is below both moving averages, the script marks a downward triangle.
+
+This helps identify periods where price is fully separated from the two long moving averages.
+
+## Core Logic
+
+1. Calculate two moving averages:
+   - `sma1 = sma(close, length1)`
+   - `sma2 = sma(close, length2)`
+
+2. Plot both moving averages:
+   - `MA-1` uses the first length, default `240`
+   - `MA-2` uses the second length, default `480`
+
+3. Check bullish condition:
+   - For each bar in the check window, the candle low must be above both `sma1` and `sma2`
+   - The current candle low must also be above both moving averages
+   - When true, the script plots an upward triangle
+
+4. Check bearish condition:
+   - For each bar in the check window, the candle high must be below both `sma1` and `sma2`
+   - The current candle high must also be below both moving averages
+   - When true, the script plots a downward triangle
+
+## Signal Meaning
+
+| Signal | Condition | Meaning |
+| --- | --- | --- |
+| Green upward triangle | Recent lows are all above both moving averages | Price is strongly above both long MAs |
+| Red downward triangle | Recent highs are all below both moving averages | Price is strongly below both long MAs |
+
+## Important Notes
+
+- This script uses Pine Script v3.
+- This is an indicator, not a strategy.
+- It does not place trades or produce Strategy Tester results.
+- The input `src` is defined but the current MA calculation uses `close` directly.
+- `dropn()` and `dropCandles` are defined but not actively used because the related line is commented out.
+- The signal can continue appearing on many bars while the condition remains true.
+- Because the default moving average lengths are long, the indicator needs enough historical bars before signals are meaningful.
+
+## Practical Use
+
+This indicator can be used as a trend-position filter:
+
+- Use the green triangle to identify candles fully above both long moving averages.
+- Use the red triangle to identify candles fully below both long moving averages.
+- Combine it with momentum, volume, pullback, breakout, or risk rules before making trading decisions.
+
+## File
+
+- `MA-16.pine`
+
+## TradingView Usage
+
+1. Open TradingView Pine Editor.
+2. Paste the contents of `MA-16.pine`.
 3. Add it to chart.
