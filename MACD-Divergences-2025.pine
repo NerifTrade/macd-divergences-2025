@@ -1,0 +1,43 @@
+//@version=5
+indicator(title="MACD Divergences 2025", overlay=true)
+
+// Getting inputs
+fast_length = input.int(12, title="Fast Length")
+slow_length = input.int(26, title="Slow Length")
+src = input.source(close, title="Source")
+signal_length = input.int(9, title="Signal Smoothing", minval=1, maxval=50)
+sma_source = input.string("EMA", title="Oscillator MA Type", options=["SMA", "EMA"])
+sma_signal = input.string("EMA", title="Signal Line MA Type", options=["SMA", "EMA"])
+
+// Plot colors
+col_macd = input.color(color.blue, "MACD Line", group="Color Settings")
+col_signal = input.color(color.orange, "Signal Line", group="Color Settings")
+col_grow_above = input.color(color.green, "Above Grow", group="Histogram")
+col_fall_above = input.color(color.teal, "Fall Above", group="Histogram")
+col_grow_below = input.color(color.red, "Below Grow", group="Histogram")
+col_fall_below = input.color(color.maroon, "Fall Below", group="Histogram")
+
+// Calculating MACD
+fast_ma = sma_source == "SMA" ? ta.sma(src, fast_length) : ta.ema(src, fast_length)
+slow_ma = sma_source == "SMA" ? ta.sma(src, slow_length) : ta.ema(src, slow_length)
+macd = fast_ma - slow_ma
+signal = sma_signal == "SMA" ? ta.sma(macd, signal_length) : ta.ema(macd, signal_length)
+hist = macd - signal
+
+// Heikin Ashi close price
+ha_t = ticker.heikinashi(syminfo.tickerid)
+ha_close = request.security(ha_t, timeframe.period, close)
+
+// Bullish divergence conditions
+cond = ta.crossover(macd, signal)
+trigger = cond and ta.barssince(cond[1]) > 1 and signal < 0
+preCont = ta.barssince(trigger[1])
+condnd1 = ((ha_close > ha_close[preCont] and signal < signal[preCont]) or (ha_close < ha_close[preCont] and signal > signal[preCont])) and trigger and signal[preCont] < 0
+plotshape(condnd1, style=shape.cross, color=color.red, location=location.abovebar, size=size.tiny)
+
+// Bearish divergence conditions
+hcond = ta.crossover(signal, macd)
+htrigger = hcond and ta.barssince(hcond[1]) > 1 and signal > 0
+hpreCont = ta.barssince(htrigger[1])
+hcondnd1 = ((ha_close > ha_close[hpreCont] and signal < signal[hpreCont]) or (ha_close < ha_close[hpreCont] and signal > signal[hpreCont])) and htrigger and signal[hpreCont] > 0
+plotshape(hcondnd1, style=shape.circle, color=color.blue, location=location.abovebar, size=size.tiny)
